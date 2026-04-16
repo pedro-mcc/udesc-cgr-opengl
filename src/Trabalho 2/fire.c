@@ -12,9 +12,9 @@
 void processInput(GLFWwindow *window);
 
 // settings
-#define SCREEN_WIDTH  640
-#define SCREEN_HEIGHT 480
-#define NUM_PARTICLES 10000
+#define SCREEN_WIDTH  1920
+#define SCREEN_HEIGHT 1080
+#define NUM_PARTICLES 100000
 
 typedef struct {
     float x, y, z; // position
