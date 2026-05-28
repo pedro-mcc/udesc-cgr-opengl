@@ -23,7 +23,7 @@ struct Vertex {
 };
 
 // --- GLOBAIS DA CÂMERA ---
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
@@ -46,15 +46,23 @@ std::vector<Vertex> loadModel(const char* path, std::string& outTexName) {
     std::string warn, err; // Variáveis para armazenar mensagens de aviso e erro do carregamento
     std::vector<Vertex> vertices; // Vetor para armazenar os vértices processados que serão usados para renderização
 
+    // Extrai o diretório base do caminho do arquivo para resolver caminhos relativos de texturas
+    std::string basePath = "";
+    std::string pathStr(path);
+    size_t pos = pathStr.find_last_of("/\\"); // Procura a última barra (Linux ou Windows)
+    if (pos != std::string::npos) {
+        basePath = pathStr.substr(0, pos + 1); // Corta a string até a barra (ex: "../assets/")
+    }
+
     // Tenta carregar o modelo usando o TinyOBJLoader
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path)) { //
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, basePath.c_str())) { 
         std::cerr << "Erro: " << warn << err << std::endl; // Imprime mensagens de aviso e erro, se houver
         return vertices; // Retorna um vetor vazio em caso de falha no carregamento
     }
 
     // Verifica se há materiais e se o primeiro material tem um nome de textura difusa
     if (!materials.empty() && !materials[0].diffuse_texname.empty()) {
-        outTexName = materials[0].diffuse_texname; // Armazena o nome da textura difusa para uso posterior
+        outTexName = basePath + materials[0].diffuse_texname; // Armazena o nome da textura difusa para uso posterior
     }
 
     // Processa cada forma e seus índices para criar os vértices
@@ -186,7 +194,7 @@ int main() {
     std::string textureFilename = "";
 
     // Carrega Modelo e Configura Buffers
-    std::vector<Vertex> modelVertices = loadModel("12140_Skull_v3_L2.obj", textureFilename); // Carrega o modelo e obtém os vértices e o nome da textura
+    std::vector<Vertex> modelVertices = loadModel("../assets/12221_Cat_v1_l3.obj", textureFilename); // Carrega o modelo e obtém os vértices e o nome da textura    
 
     // Verifica se o vetor de vértices está vazio antes de prosseguir
     if (modelVertices.empty()) {
@@ -268,6 +276,8 @@ int main() {
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp); // Matriz de visão baseada na posição e direção da câmera
         glm::mat4 model = glm::mat4(1.0f); // Matriz de modelo inicializada como identidade
         model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f)); // Escala o modelo para caber melhor na cena
+
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Roda o modelo para orientá-lo corretamente
 
         // ENVIA AS MATRIZES PARA O SHADER
         int modelLoc = glGetUniformLocation(shaderProgram, "model"); // Localização da matriz de modelo no shader
