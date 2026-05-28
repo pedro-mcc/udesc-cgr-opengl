@@ -14,13 +14,13 @@ void processInput(GLFWwindow *window);
 // settings
 #define SCREEN_WIDTH  1920
 #define SCREEN_HEIGHT 1080
-#define NUM_PARTICLES 100000
+#define NUM_PARTICLES 20000
 
 typedef struct {
     float x, y, z; // position
     float r, g, b, a; // colors
     float velocity_x, velocity_y, velocity_z; // velocity
-    float life; // life of particle
+    float life_time; // life_time of particle
 } Particle;
 
 Particle particles[NUM_PARTICLES];
@@ -43,21 +43,21 @@ void respawnParticle(Particle* p) {
     p->b = 0.1f; // amount of blue
     p->a = 1.0f; // opacity
 
-    // Particle life
-    p->life = ((rand() % 100) / 100.0f) * 0.8f + 0.2f;
+    // Particle life_time
+    p->life_time = ((rand() % 100) / 100.0f) * 0.9f;
 }
 
 void updateParticles(float dt) {
     for (int i = 0; i < NUM_PARTICLES; i++) {
         Particle* p = &particles[i];
-        if (p->life > 0.0f) {
+        if (p->life_time > 0.0f) {
             p->x += p->velocity_x * dt;
             p->y += p->velocity_y * dt;
             p->z += p->velocity_z * dt;
-            p->life -= dt * 0.7f;
+            p->life_time -= dt * 1.5f;
 
-            p->a = p->life;
-            p->g = p->life * 0.6f; 
+            p->a = p->life_time;
+            p->g = p->life_time * 0.6f; 
         } else {
             respawnParticle(p);
         }
@@ -124,7 +124,7 @@ int main()
     
 
     for (int i = 0; i < NUM_PARTICLES; i++) {
-        particles[i].life = -1.0f; 
+        particles[i].life_time = -1.0f; 
     }
 
     // Ensure we can capture the escape key being pressed below
@@ -139,7 +139,7 @@ int main()
     // render loop
     while (!glfwWindowShouldClose(window))
     {
-        double currentTime = glfwGetTime();
+        double currentTime = glfwGetTime() / 2.5f;
         float dt = (float)(currentTime - lastTime);
         lastTime = currentTime;
 
