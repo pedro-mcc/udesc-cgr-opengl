@@ -194,7 +194,7 @@ int main() {
     std::string textureFilename = "";
 
     // Carrega Modelo e Configura Buffers
-    std::vector<Vertex> modelVertices = loadModel("/assets/12221_Cat_v1_l3.obj", textureFilename); // Carrega o modelo e obtém os vértices e o nome da textura    
+    std::vector<Vertex> modelVertices = loadModel("../assets/12221_Cat_v1_l3.obj", textureFilename); // Carrega o modelo e obtém os vértices e o nome da textura    
 
     // Verifica se o vetor de vértices está vazio antes de prosseguir
     if (modelVertices.empty()) {
