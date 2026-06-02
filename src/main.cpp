@@ -6,6 +6,9 @@
 #include <iostream>
 #include <vector>
 
+#include "Camera.h"
+#include "Model.h"
+
 // --- IMPLEMENTAÇÃO DO TINY OBJ LOADER ---
 #define TINYOBJLOADER_DISABLE_FAST_FLOAT
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -15,76 +18,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-// --- ESTRUTURAS ---
-struct Vertex {
-    float x, y, z;
-    float r, g, b;
-    float u, v;
-};
-
-// --- GLOBAIS DA CÂMERA ---
-glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  5.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+// --- VARIÁVEIS GLOBAIS ---
 
 // Variáveis para controle do tempo
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // Variáveis para controle do mouse
-float yaw = -90.0f;
-float pitch = 0.0f;
 float lastX = 400.0f, lastY = 300.0f;
 bool firstMouse = true;
 
-// --- FUNÇÕES ---
-// Função para carregar o modelo usando o TinyOBJLoader
-std::vector<Vertex> loadModel(const char* path, std::string& outTexName) {
-    tinyobj::attrib_t attrib; // Estrutura para armazenar os atributos do modelo (vértices, normais, texcoords, etc.)
-    std::vector<tinyobj::shape_t> shapes; // Estrutura para armazenar as formas do modelo (cada forma pode conter um conjunto de triângulos)
-    std::vector<tinyobj::material_t> materials; // Estrutura para armazenar os materiais do modelo (cores, texturas, etc.)
-    std::string warn, err; // Variáveis para armazenar mensagens de aviso e erro do carregamento
-    std::vector<Vertex> vertices; // Vetor para armazenar os vértices processados que serão usados para renderização
+Camera camera(glm::vec3(0.0f, 1.0f, 5.0f));
 
-    // Extrai o diretório base do caminho do arquivo para resolver caminhos relativos de texturas
-    std::string basePath = "";
-    std::string pathStr(path);
-    size_t pos = pathStr.find_last_of("/\\"); // Procura a última barra (Linux ou Windows)
-    if (pos != std::string::npos) {
-        basePath = pathStr.substr(0, pos + 1); // Corta a string até a barra (ex: "../assets/")
-    }
-
-    // Tenta carregar o modelo usando o TinyOBJLoader
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, basePath.c_str())) { 
-        std::cerr << "Erro: " << warn << err << std::endl; // Imprime mensagens de aviso e erro, se houver
-        return vertices; // Retorna um vetor vazio em caso de falha no carregamento
-    }
-
-    // Verifica se há materiais e se o primeiro material tem um nome de textura difusa
-    if (!materials.empty() && !materials[0].diffuse_texname.empty()) {
-        outTexName = basePath + materials[0].diffuse_texname; // Armazena o nome da textura difusa para uso posterior
-    }
-
-    // Processa cada forma e seus índices para criar os vértices
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-            vertex.x = attrib.vertices[3 * index.vertex_index + 0]; // Obtém a coordenada x do vértice
-            vertex.y = attrib.vertices[3 * index.vertex_index + 1]; // Obtém a coordenada y do vértice
-            vertex.z = attrib.vertices[3 * index.vertex_index + 2]; // Obtém a coordenada z do vértice
-
-            vertex.r = 1.0f; vertex.g = 1.0f; vertex.b = 1.0f; // Define a cor do vértice como branco (pode ser modificado para usar cores do material)
-
-            if (index.texcoord_index >= 0) {
-                vertex.u = attrib.texcoords[2 * index.texcoord_index + 0]; // Obtém a coordenada u da textura
-                vertex.v = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]; // Obtém a coordenada v da textura (inverte o valor para corrigir a orientação)
-            }
-
-            vertices.push_back(vertex); // Adiciona o vértice processado ao vetor de vértices
-        }
-    }
-    return vertices;
-}
 
 // Callback para controle do mouse
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -93,18 +38,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     float yoffset = lastY - ypos; 
     lastX = xpos; lastY = ypos;
 
-    float sensitivity = 0.1f;
-    yaw += xoffset * sensitivity;
-    pitch += yoffset * sensitivity;
-
-    if (pitch > 89.0f) pitch = 89.0f;
-    if (pitch < -89.0f) pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    camera.ProcessMouseMovement(xoffset, yoffset); // Processa o movimento do mouse para controlar a câmera
 }
 
 // Processamento de entrada do teclado
@@ -114,13 +48,13 @@ void processInput(GLFWwindow *window) {
 
     float cameraSpeed = 5.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
+        camera.ProcessKeyboard(GLFW_KEY_W, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
+        camera.ProcessKeyboard(GLFW_KEY_S, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.ProcessKeyboard(GLFW_KEY_A, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.ProcessKeyboard(GLFW_KEY_D, deltaTime);
 }
 
 // --- FUNÇÃO PRINCIPAL ---
@@ -148,6 +82,8 @@ int main() {
         std::cerr << "Falha ao inicializar o GLAD" << std::endl;
         return -1;
     }
+
+    Model myModel("../assets/12221_Cat_v1_l3.obj");
 
     // --- SHADERS BÁSICOS (Movidos para cá, após inicializar o GLAD) ---
     const char* vertexShaderSource = "#version 330 core\n"
@@ -191,36 +127,7 @@ int main() {
     glDeleteShader(fragmentShader); // Deleta o shader de fragmento
 
     // Cria a string que vai receber o nome da textura
-    std::string textureFilename = "";
-
-    // Carrega Modelo e Configura Buffers
-    std::vector<Vertex> modelVertices = loadModel("../assets/12221_Cat_v1_l3.obj", textureFilename); // Carrega o modelo e obtém os vértices e o nome da textura    
-
-    // Verifica se o vetor de vértices está vazio antes de prosseguir
-    if (modelVertices.empty()) {
-        std::cerr << "Encerrando: Vetor de vértices vazio." << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    
-    // Configura os buffers de vértices e atributos
-    unsigned int VAO, VBO; // Vertex Array Object e Vertex Buffer Object
-    glGenVertexArrays(1, &VAO); // Gera um VAO
-    glGenBuffers(1, &VBO); // Gera um VBO
-
-    // Configura o VAO e VBO
-    glBindVertexArray(VAO); // Vincula o VAO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Vincula o VBO
-    glBufferData(GL_ARRAY_BUFFER, modelVertices.size() * sizeof(Vertex), modelVertices.data(), GL_STATIC_DRAW); // Envia os dados dos vértices para a GPU
-
-    // Configura o Atributo de Posição (Location = 0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Configura o layout do atributo de posição
-    glEnableVertexAttribArray(0); // Habilita o atributo de posição
-
-    // Configura o Atributo de Textura (Location = 1)
-    // Os UVs estão depois do x,y,z e do nx,ny,nz (pulamos 6 floats)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+    std::string textureFilename = myModel.textureFilename;
 
     // Gera e Carrega a Textura
     unsigned int texture;
@@ -269,14 +176,15 @@ int main() {
         // Limpa o buffer de cor e profundidade para preparar a nova renderização
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Define a cor de fundo
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Limpa os buffers de cor e profundidade
+        
         glUseProgram(shaderProgram); // Usa o programa de shader para renderizar o modelo
 
         // Configura as matrizes de projeção, visão e modelo
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1920.0f / 1080.0f, 0.1f, 100.0f); // Matriz de projeção perspectiva
-        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp); // Matriz de visão baseada na posição e direção da câmera
+        glm::mat4 view = camera.GetViewMatrix(); // Matriz de visão obtida da câmera
+        
         glm::mat4 model = glm::mat4(1.0f); // Matriz de modelo inicializada como identidade
         model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f)); // Escala o modelo para caber melhor na cena
-
         model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Roda o modelo para orientá-lo corretamente
 
         // ENVIA AS MATRIZES PARA O SHADER
@@ -293,9 +201,7 @@ int main() {
         glActiveTexture(GL_TEXTURE0); // Ativa a unidade de textura 0
         glBindTexture(GL_TEXTURE_2D, texture); // Vincula a textura que carregamos para ser usada no shader
 
-        // Desenha o modelo usando glDrawArrays, que desenha os triângulos com base nos vértices fornecidos
-        glBindVertexArray(VAO); // Vincula o VAO que contém as configurações dos vértices
-        glDrawArrays(GL_TRIANGLES, 0, modelVertices.size()); // Desenha os triângulos usando os vértices do modelo
+        myModel.Draw();
 
         glfwSwapBuffers(window); // Troca os buffers para exibir a nova renderização
         glfwPollEvents(); // Processa os eventos de entrada, como teclado e mouse
