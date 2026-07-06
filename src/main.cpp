@@ -83,7 +83,7 @@ int main() {
         return -1;
     }
 
-    Model myModel("../assets/12221_Cat_v1_l3.obj");
+    Model myModel("../assets/alemao.obj");
 
     // --- SHADERS BÁSICOS (Movidos para cá, após inicializar o GLAD) ---
     const char* vertexShaderSource = "#version 330 core\n"
@@ -184,8 +184,9 @@ int main() {
         glm::mat4 view = camera.GetViewMatrix(); // Matriz de visão obtida da câmera
         
         glm::mat4 model = glm::mat4(1.0f); // Matriz de modelo inicializada como identidade
-        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f)); // Escala o modelo para caber melhor na cena
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Roda o modelo para orientá-lo corretamente
+        model = glm::translate(model, glm::vec3(0.0f, -0.8f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // Escala o modelo para caber melhor na cena
+        model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Roda o modelo para orientá-lo corretamente
 
         // ENVIA AS MATRIZES PARA O SHADER
         int modelLoc = glGetUniformLocation(shaderProgram, "model"); // Localização da matriz de modelo no shader

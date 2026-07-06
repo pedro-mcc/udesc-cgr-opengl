@@ -1,0 +1,22 @@
+# Blender 5.0.1 MTL File: 'Untitled1.blend'
+# www.blender.org
+
+newmtl Material.001
+Ns 1000.000000
+Ka 0.118182 0.118182 0.118182
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd Material.001_Base_color.png
+
+newmtl Material.002
+Ns 1000.000000
+Ka 0.163636 0.163636 0.163636
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
