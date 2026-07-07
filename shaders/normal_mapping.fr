@@ -22,11 +22,13 @@ void main()
     vec3 normal;
     
     if (useNormalMap) {
-        // ON: Use normal mapping
+        // ON: Usar normal mapping
+        // Texturas guardam vetores em [0, 1], mas normais precisam de [-1, 1].
+        // O "* 2.0 - 1.0" faz esse remapeamento.
         normal = texture(normalMap, fs_in.TexCoords).rgb;
         normal = normalize(normal * 2.0 - 1.0);  
     } else {
-        // OFF: Use default normal
+        // OFF: Usar normal padrão
         normal = vec3(0.0, 0.0, 1.0);
     }
    
@@ -36,7 +38,9 @@ void main()
     // ambient
     vec3 ambient = 0.1 * color;
     
-    // diffuse
+    // Cálculo da luz no Tangent Space:
+    // Como a normal (da textura) e os vetores de luz estão no mesmo espaço TBN,
+    // o produto escalar (dot) resulta na iluminação correta do relevo.
     vec3 lightDir = normalize(fs_in.TangentLightPos - fs_in.TangentFragPos);
     float diff = max(dot(lightDir, normal), 0.0);
     vec3 diffuse = diff * color;
@@ -50,4 +54,3 @@ void main()
     vec3 specular = vec3(0.2) * spec;
     FragColor = vec4(ambient + diffuse + specular, 1.0);
 }
-

@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "camera.h"
-#include "model.h"
 #include "shader.h"
 
 // --- IMPLEMENTAÇÃO DO TINY OBJ LOADER ---
@@ -53,6 +52,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    // Cria a janela GLFW
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "Normal Mapping", NULL, NULL);
     if(window == NULL){
         std::cerr << "ERROR::CREATE WINDOW GLFW" << std::endl;
@@ -73,9 +73,13 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
+    // 2. Compilação dos Shaders:
+    // shader: responsável pelo Normal Mapping (lê a normal map e aplica iluminação)
+    // lampShader: shader simples para renderizar o objeto que representa a fonte de luz
     Shader shader("../shaders/normal_mapping.vs", "../shaders/normal_mapping.fr");
     Shader lampShader("../shaders/lamp.vs", "../shaders/lamp.fr");
 
+    // 3. Carregamento das Texturas:
     unsigned int diffuseMap = loadTexture("../assets/brickwall_diffuse.jpg");
     unsigned int normalMap = loadTexture("../assets/brickwall_normal.jpg");
 
@@ -88,6 +92,7 @@ int main() {
     // Render Loop
     while(!glfwWindowShouldClose(window))
     {
+        // Cálculo do frame time para movimentação constante independente da taxa de FPS 
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -99,10 +104,15 @@ int main() {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // 4. Lógica de Animação da Luz:
+        // Movemos a posição da luz no tempo usando seno e cosseno para criar um órbita
+        // Isso permite testar visualmente como a iluminação reage a diferentes ângulos
         float speed = 1.0f;
         float rangeX = 1.2f; 
         float rangeY = 0.8f;
 
+        // Atualização dinâmica da posição da luz usando oscilação trigonométrica
+        // Isso demonstra que o normal mapping reage a mudanças na direção da luz.
         lightPos.x = std::sin(glfwGetTime() * speed) * rangeX;
         lightPos.y = std::cos(glfwGetTime() * speed) * rangeY;
         lightPos.z = 0.5f;
@@ -111,19 +121,20 @@ int main() {
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);    
         glm::mat4 view = camera.GetViewMatrix();
         
+        // 5. Renderização da Superfície (Parede):
         shader.use();
-        shader.setBool("useNormalMap", normalMappingEnabled);
+        shader.setBool("useNormalMap", normalMappingEnabled); // 'useNormalMap' controla se o shader aplica ou não o normal mapping
         shader.setMat4("projection", projection);
         shader.setMat4("view", view);
 
-        // render normal-mapped quad
+        // Define a transformação do modelo no espaço 3D
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-
         shader.setMat4("model", model);
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
         
+        // Ativa as texturas para o shader: a textura difusa e a normal map
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
@@ -131,7 +142,8 @@ int main() {
         
         renderQuad();
 
-        // renderiza um pequeno bloco para representar onde a luz está
+        // 6. Renderização da Lâmpada (Visualizador da posição da luz):
+        // Usa o shader simplificado para garantir que a luz apareça sempre branca (sem sombreamento)
         lampShader.use();
         lampShader.setMat4("projection", projection);
         lampShader.setMat4("view", view);
@@ -156,6 +168,7 @@ void renderQuad()
 {
     if (quadVAO == 0)
     {
+        // 1. Definição básica: vértices do plano e suas coordenadas de textura (UVs)
         glm::vec3 pos1(-1.0f,  1.0f, 0.0f);
         glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
         glm::vec3 pos3( 1.0f, -1.0f, 0.0f);
@@ -166,28 +179,40 @@ void renderQuad()
         glm::vec2 uv3(1.0f, 0.0f);  
         glm::vec2 uv4(1.0f, 1.0f);
         
+        // Normal padrão (apontando para fora da tela)
         glm::vec3 nm(0.0f, 0.0f, 1.0f);
 
-        glm::vec3 tangent1, bitangent1;
-        glm::vec3 tangent2, bitangent2;
-        
+        // 2. Cálculo das Tangentes e Bitangentes:
+        // Para que o Normal Mapping funcione, precisamos mapear o espaço da textura (UV)
+        // para o espaço geométrico do triângulo (XYZ). A tangente é a direção do eixo U da textura.
+
         // Triângulo 1
+        glm::vec3 tangent1, bitangent1;        
+        
+        // Calculamos a aresta do triângulo (edge) e a variação das coordenadas UV (deltaUV)
         glm::vec3 edge1 = pos2 - pos1;
         glm::vec3 edge2 = pos3 - pos1;
         glm::vec2 deltaUV1 = uv2 - uv1;
         glm::vec2 deltaUV2 = uv3 - uv1;
 
+        // Fator 'f' para resolver o sistema linear:
+        // edge1 = deltaUV1.x * T + deltaUV1.y * B
+        // edge2 = deltaUV2.x * T + deltaUV2.y * B
         float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
+        // A tangente é calculada projetando as arestas nas direções das variações UV
         tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
         tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
         tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
 
+        // Bitangente é o produto vetorial entre a normal e a tangente (ortogonal a ambos)
         bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
         bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
         bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
 
         // Triângulo 2
+        glm::vec3 tangent2, bitangent2;
+
         edge1 = pos3 - pos1;
         edge2 = pos4 - pos1;
         deltaUV1 = uv3 - uv1;
@@ -214,11 +239,24 @@ void renderQuad()
             pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
         };
         
+        // 3. Configuração do VAO e VBO para o quad
+        
+        // Geração e vinculação do Vertex Array Object (VAO) e Vertex Buffer Object (VBO)
         glGenVertexArrays(1, &quadVAO);
+        
+        // Geração do VBO para armazenar os vértices do quad
         glGenBuffers(1, &quadVBO);
+        
+        // Vinculação do VAO para configurar os atributos de vértice
         glBindVertexArray(quadVAO);
+        
+        // Vinculação do VBO e envio dos dados de vértice para a GPU
         glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        
+        // Envio dos dados de vértice para o buffer da GPU
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        
+        // Configuração dos atributos de vértice: posição, normal, coordenadas de textura, tangente e bitangente
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(1);
@@ -230,6 +268,7 @@ void renderQuad()
         glEnableVertexAttribArray(4);
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
     }
+    // Renderiza o quad usando o VAO configurado
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -266,7 +305,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-// Callback para controle do mouse
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);

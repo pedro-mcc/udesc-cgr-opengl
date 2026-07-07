@@ -8,9 +8,9 @@ layout (location = 4) in vec3 aBitangent;
 out VS_OUT {
     vec3 FragPos;
     vec2 TexCoords;
-    vec3 TangentLightPos;
-    vec3 TangentViewPos;
-    vec3 TangentFragPos;
+    vec3 TangentLightPos; // Posição da luz no espaço tangente
+    vec3 TangentViewPos; // Posição da câmera no espaço tangente
+    vec3 TangentFragPos; // Posição do fragmento no espaço tangente
 } vs_out;
 
 uniform mat4 projection;
@@ -25,13 +25,24 @@ void main()
     vs_out.FragPos = vec3(model * vec4(aPos, 1.0));   
     vs_out.TexCoords = aTexCoords;
     
+    // 1. Criação da Matriz Normal para garantir transformação correta sob rotação/escala
     mat3 normalMatrix = transpose(inverse(mat3(model)));
+    
+    // 2. Transformação dos vetores de base (T, N) para o World Space
     vec3 T = normalize(normalMatrix * aTangent);
     vec3 N = normalize(normalMatrix * aNormal);
+    
+    // 3. Re-ortogonalização: garante que T seja perfeitamente perpendicular a N
     T = normalize(T - dot(T, N) * N);
+    
+    // 4. Produto vetorial gera o terceiro eixo (B) do sistema TBN
     vec3 B = cross(N, T);
     
+    // 5. Matriz TBN transposta leva vetores do World Space para o Tangent Space
     mat3 TBN = transpose(mat3(T, B, N));    
+    
+    // 6. Projeta os vetores de luz e visão no espaço local da textura (Tangent Space)
+    // Permite calcular a iluminação usando a normal extraída da textura
     vs_out.TangentLightPos = TBN * lightPos;
     vs_out.TangentViewPos  = TBN * viewPos;
     vs_out.TangentFragPos  = TBN * vs_out.FragPos;
