@@ -1,0 +1,7 @@
+#version 330 core
+out vec4 FragColor;
+
+void main() {
+    // Ignora qualquer iluminação e pinta o objeto de branco puro
+    FragColor = vec4(1.0); 
+}

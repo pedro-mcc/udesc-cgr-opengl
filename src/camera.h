@@ -20,6 +20,7 @@ class Camera {
         // Configurações da câmera
         float Speed;
         float Sensitivity;
+        float Zoom;
 
         // Construtor com valores padrão
         Camera(glm::vec3 position = glm::vec3(0.0f, 1.0f, 5.0f)){
@@ -62,6 +63,15 @@ class Camera {
                 Pitch = -89.0f;
             
             updateCameraVectors();
+        }
+
+        void ProcessMouseScroll(float yoffset)
+        {
+            Zoom -= (float)yoffset;
+            if (Zoom < 1.0f)
+                Zoom = 1.0f;
+            if (Zoom > 45.0f)
+                Zoom = 45.0f;
         }
 
     private:
