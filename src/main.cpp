@@ -77,7 +77,6 @@ int main() {
     // shader: responsável pelo Normal Mapping (lê a normal map e aplica iluminação)
     // lampShader: shader simples para renderizar o objeto que representa a fonte de luz
     Shader shader("../shaders/normal_mapping.vs", "../shaders/normal_mapping.fr");
-    Shader lampShader("../shaders/lamp.vs", "../shaders/lamp.fr");
 
     // 3. Carregamento das Texturas:
     unsigned int diffuseMap = loadTexture("../assets/brickwall_diffuse.jpg");
@@ -140,18 +139,6 @@ int main() {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, normalMap);
         
-        renderQuad();
-
-        // 6. Renderização da Lâmpada (Visualizador da posição da luz):
-        // Usa o shader simplificado para garantir que a luz apareça sempre branca (sem sombreamento)
-        lampShader.use();
-        lampShader.setMat4("projection", projection);
-        lampShader.setMat4("view", view);
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.1f));
-        lampShader.setMat4("model", model);
         renderQuad();
 
         glfwSwapBuffers(window);
