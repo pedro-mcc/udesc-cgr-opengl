@@ -25,6 +25,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadTexture(const char *path);
+void renderNormalGrid();
 
 // Configurações de tela
 const unsigned int SCR_WIDTH = 1920;
@@ -43,6 +44,8 @@ bool firstMouse = true;
 // Controle do Normal Mapping
 bool normalMappingEnabled = true;
 bool normalMapKeyPressed = false;
+
+int renderMode = 0;
 
 // --- FUNÇÃO PRINCIPAL ---
 int main() {
@@ -73,9 +76,10 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
+    glLineWidth(3.0f);
+
     // 2. Compilação dos Shaders:
     // shader: responsável pelo Normal Mapping (lê a normal map e aplica iluminação)
-    // lampShader: shader simples para renderizar o objeto que representa a fonte de luz
     Shader shader("../shaders/normal_mapping.vs", "../shaders/normal_mapping.fr");
 
     // 3. Carregamento das Texturas:
@@ -111,17 +115,18 @@ int main() {
         float rangeY = 0.8f;
 
         // Atualização dinâmica da posição da luz usando oscilação trigonométrica
-        // Isso demonstra que o normal mapping reage a mudanças na direção da luz.
+        // Demonstra que o normal mapping reage a mudanças na direção da luz.
         lightPos.x = std::sin(glfwGetTime() * speed) * rangeX;
         lightPos.y = std::cos(glfwGetTime() * speed) * rangeY;
         lightPos.z = 0.5f;
 
-        // configure view/projection matrices
+        // configure view/projection
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);    
         glm::mat4 view = camera.GetViewMatrix();
         
         // 5. Renderização da Superfície (Parede):
         shader.use();
+        shader.setInt("renderMode", renderMode);
         shader.setBool("useNormalMap", normalMappingEnabled); // 'useNormalMap' controla se o shader aplica ou não o normal mapping
         shader.setMat4("projection", projection);
         shader.setMat4("view", view);
@@ -174,7 +179,7 @@ void renderQuad()
         // para o espaço geométrico do triângulo (XYZ). A tangente é a direção do eixo U da textura.
 
         // Triângulo 1
-        glm::vec3 tangent1, bitangent1;        
+        glm::vec3 tangent1, bitangent1;      
         
         // Calculamos a aresta do triângulo (edge) e a variação das coordenadas UV (deltaUV)
         glm::vec3 edge1 = pos2 - pos1;
@@ -270,12 +275,17 @@ void processInput(GLFWwindow *window) {
         normalMappingEnabled = !normalMappingEnabled; // Toggle normal mapping
         normalMapKeyPressed = true;
         
-        // Debug for normal mapping ON and OFF
+        // Debug para normal mapping ON e OFF
         std::cout << "Normal Mapping: " << (normalMappingEnabled ? "ON" : "OFF") << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE) {
         normalMapKeyPressed = false;
     }
+
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) renderMode = 0;
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) renderMode = 1;
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) renderMode = 2;
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) renderMode = 3;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(GLFW_KEY_W, deltaTime);
